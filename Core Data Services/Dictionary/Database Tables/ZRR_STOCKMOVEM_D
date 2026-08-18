@@ -1,0 +1,15 @@
+@EndUserText.label : 'Stock Movement'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table zrr_stockmovem_d {
+
+  key client      : abap.clnt not null;
+  key movement_id : sysuuid_x16 not null;
+  product_id      : sysuuid_x16 not null;
+  qty_change      : abap.int4;
+  movement_date   : abap.dats;
+  include sych_bdl_draft_admin_inc;
+
+}

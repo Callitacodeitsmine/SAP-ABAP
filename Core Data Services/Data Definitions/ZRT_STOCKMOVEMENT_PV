@@ -1,0 +1,13 @@
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Stock Movement Interface View'
+define view entity ZRT_STOCKMOVEMENT_IV
+  as select from zrr_stockmovem
+  association to parent ZRT_PRO_IV as _Product
+    on $projection.product_id = _Product.product_id
+{
+  key movement_id,
+      product_id,
+      qty_change,
+      movement_date,
+      _Product
+}

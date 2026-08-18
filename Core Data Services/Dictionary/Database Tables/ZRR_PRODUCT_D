@@ -1,0 +1,16 @@
+@EndUserText.label : 'Product Draft'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table zrr_product_d {
+
+  key client      : abap.clnt not null;
+  key product_id  : sysuuid_x16 not null;
+  product_name    : abap.char(40);
+  stock_qty       : abap.int4;
+  reorder_level   : abap.int4;
+  last_changed_at : timestamp;
+  include sych_bdl_draft_admin_inc;
+
+}

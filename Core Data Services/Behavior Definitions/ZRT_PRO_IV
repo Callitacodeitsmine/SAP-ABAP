@@ -1,0 +1,67 @@
+managed implementation in class zbp_rt_pro_iv unique;
+strict ( 2 );
+with draft;
+
+define behavior for ZRT_PRO_IV alias Product
+persistent table zrr_product
+draft table zrr_product_d
+
+authorization master ( instance )
+etag master last_changed_at
+lock master
+total etag last_changed_at
+{
+  create ( authorization : global );
+  update;
+  delete;
+
+  field ( readonly, numbering : managed ) product_id;
+  field ( readonly : update ) last_changed_at;
+
+  association _Movements { create; with draft; }
+
+  validation validateStock on save { create; update; field stock_qty; }
+
+  determination setLastChanged on save { create; field last_changed_at; }
+
+  action reorderNow result [1] $self;
+
+  draft action Edit;
+  draft action Resume;
+  draft action Activate optimized;
+  draft action Discard;
+  draft determine action Prepare;
+
+  mapping for zrr_product
+  {
+    product_id      = product_id;
+    product_name    = product_name;
+    stock_qty       = stock_qty;
+    reorder_level   = reorder_level;
+    last_changed_at = last_changed_at;
+  }
+}
+
+define behavior for ZRT_STOCKMOVEMENT_IV alias Movement
+persistent table zrr_stockmovem
+draft table zrr_stockmovem_d
+lock dependent by _Product
+authorization dependent by _Product
+etag dependent by _Product
+{
+  update;
+  delete;
+
+  field ( readonly, numbering : managed ) movement_id;
+  field ( readonly ) product_id;
+
+  association _Product { with draft; }
+
+  mapping for zrr_stockmovem
+  {
+    movement_id   = movement_id;
+    product_id    = product_id;
+    qty_change    = qty_change;
+    movement_date = movement_date;
+  }
+}

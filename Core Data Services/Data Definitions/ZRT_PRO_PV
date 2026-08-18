@@ -1,0 +1,14 @@
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Product Interface View'
+define root view entity ZRT_PRO_IV
+  as select from zrr_product
+  composition [0..*] of ZRT_STOCKMOVEMENT_IV as _Movements
+{
+  key product_id,
+      product_name,
+      stock_qty,
+      reorder_level,
+      last_changed_at,
+
+      _Movements
+}
