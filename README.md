@@ -113,4 +113,8 @@ flowchart LR
   production.
 - Introduce numbering/ID generation via a proper number range object
   instead of relying solely on managed UUID keys, if this needs to
+<<<<<<< HEAD
   integrate with external systems that expect sequential IDs.
+=======
+  integrate with external systems that expect sequential IDs.
+>>>>>>> 12554ad4c5397a0cf8d27752ef63619747c7dc61
