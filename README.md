@@ -34,17 +34,38 @@ erDiagram
 
 ```mermaid
 flowchart LR
-    DB1[(zrr_product)] --> IV1[ZRT_PRO_IV<br/>Interface View]
-    DB2[(zrr_stockmovem)] --> IV2[ZRT_STOCKMOVEMENT_IV<br/>Interface View]
-    IV1 -- composition _Movements --> IV2
-    IV2 -- association _Product --> IV1
-    IV1 --> PV1[ZRT_PRO_PV<br/>Projection View + UI Annotations]
-    IV2 --> PV2[ZRT_STOCKMOVEMENT_PV<br/>Projection View]
-    PV1 --> BDEF[Behavior Definition<br/>managed, strict, draft-enabled]
-    PV2 --> BDEF
-    BDEF --> SD[Service Definition<br/>ZRT_PRODUCT_SD]
-    SD --> SB[Service Binding<br/>OData V4 - UI]
-    SB --> Fiori[Fiori Elements<br/>List Report / Object Page]
+    DB1[(z_product<br/>Persistent Table)]
+    DB2[(z_product_d<br/>Draft Table)]
+
+    DB1 -->|active data| ROOT[Z_PRODUCT_I<br/>Root View Entity<br/>@Draft.enabled: true]
+    DB2 -->|draft shadow data| ROOT
+
+    ROOT -->|exposed via| CV[Z_PRODUCT<br/>Consumption View]
+    ROOT -->|implements| BDEF[Z_PRODUCT_I.bdef<br/>managed, strict 2<br/>etag master, lock master<br/>authorization master<br/>instance]
+
+    CV --> SB[Service Binding<br/>OData V4 / Web API]
+    SB --> Fiori[Fiori Elements UI]
+
+    BDEF --> CRUD[create / update / delete<br/>field readonly: product_id,<br/>last_changed_at]
+
+    BDEF --> DRAFT[draft actions:<br/>Edit / Activate / Discard / Resume<br/>draft determine action: Prepare]
+
+    BDEF --> VAL[validation: validateStock<br/>on save]
+    BDEF --> DET[determination: setLastChanged<br/>on save, on create]
+    BDEF --> ACT[action: reorderNow]
+
+    BDEF -->|managed implementation<br/>in class| GCS["Global Class Shell<br/>(empty, CREATE PRIVATE)"]
+
+    GCS -->|Local Definitions /<br/>Implementations include| LHC[Local Handler Class<br/>lhc_zrt_product<br/>INHERITING FROM<br/>cl_abap_behavior_handler]
+
+    LHC --> VS[validateStock<br/>FOR VALIDATE ON SAVE]
+    LHC --> SL[setLastChanged<br/>FOR DETERMINE ON SAVE]
+    LHC --> RN[reorderNow<br/>FOR MODIFY / ACTION]
+    LHC --> IA[get_instance_authorizations<br/>FOR INSTANCE AUTHORIZATION]
+
+    VS -->|executes| VAL
+    SL -->|executes| DET
+    RN -->|executes| ACT
 ```
 
 ## Tech Stack
@@ -77,16 +98,19 @@ flowchart LR
 
 | | |
 |---|---|
-| ![DB tables: zrr_product, zrr_stockmovem](docs/images/01-db-tables.png) | Database tables `ZRR_PRODUCT` and `ZRR_STOCKMOVEM` with key fields |
-| ![Interface views with association/composition](docs/images/02-interface-views.png) | `ZRT_STOCKMOVEMENT_IV` and `ZRT_PRO_IV` — composition + association |
-| ![Projection view with UI annotations](docs/images/03-projection-ui-annotations.png) | `ZRT_PRO_PV` — `@UI.headerInfo`, `@UI.facet`, `@UI.lineItem`, `@UI.selectionField` |
-| ![Behavior definition — managed, draft, validation, action](docs/images/04-behavior-definition.png) | `ZRT_PRO_PV`/`ZRT_STOCKMOVEMENT_PV` — validations, determinations, `reorderNow` action, draft actions |
-| ![Service binding published, entity set preview](docs/images/05-service-binding-published.png) | `ZRT_PRO_IV_SB` — OData V4-UI binding, `Product`/`Movement` entity sets, Fiori App URL |
-| ![Swagger metadata for the service](docs/images/06-swagger-metadata.png) | Auto-generated Swagger UI — `GET /Product`, `GET /Product/{product_id}`, `POST /$batch` |
-| ![Fiori Elements list report — Products](docs/images/07-fiori-list-report.png) | Live Fiori Elements list report: Products with `stock_qty`, `reorder_level` |
-| ![Fiori Elements list report — Stock Movements](docs/images/08-fiori-stock-movements.png) | Associated Stock Movements list, driven by the `_Movements` composition |
-| ![Create flow — draft, then activate](docs/images/09-create-draft-flow.png) | Create → draft (Create/Discard Draft) → **Object created** toast |
-| ![Delete flow](docs/images/10-delete-flow.png) | Multi-select delete → **Objects deleted** toast |
+| ![DB tables: zrr_product, zrr_stockmovem](project-1-rap-odata/docs/images/01-db-tables.png) | Database tables `ZRR_PRODUCT` and `ZRR_STOCKMOVEM` with key fields |
+| ![Interface views with association/composition](project-1-rap-odata/docs/images/02-interface-views.png) | `ZRT_STOCKMOVEMENT_IV` and `ZRT_PRO_IV` — composition + association |
+| ![Projection view with UI annotations](project-1-rap-odata/docs/images/03-projection-ui-annotations.png) | `ZRT_PRO_PV` — `@UI.headerInfo`, `@UI.facet`, `@UI.lineItem`, `@UI.selectionField` |
+| ![Behavior definition — managed, draft, validation, action](project-1-rap-odata/docs/images/04-behavior-definition.png) | `ZRT_PRO_PV`/`ZRT_STOCKMOVEMENT_PV` — validations, determinations, `reorderNow` action, draft actions |
+| ![Service binding published, entity set preview](project-1-rap-odata/docs/images/05-service-binding-published.png) | `ZRT_PRO_IV_SB` — OData V4-UI binding, `Product`/`Movement` entity sets, Fiori App URL |
+| ![Swagger metadata for the service](project-1-rap-odata/docs/images/06-swagger-metadata.png) | Auto-generated Swagger UI — `GET /Product`, `GET /Product/{product_id}`, `POST /$batch` |
+| ![Fiori Elements list report — Products](project-1-rap-odata/docs/images/07-fiori-list-report.png) | Live Fiori Elements list report: Products with `stock_qty`, `reorder_level` |
+| ![Fiori Elements list report — Stock Movements](project-1-rap-odata/docs/images/08-fiori-stock-movements.png) | Associated Stock Movements list, driven by the `_Movements` composition |
+| ![New Object dialog — Time Stamp picker](project-1-rap-odata/docs/images/09-create-new-object-dialog.png) | Create form with date/time picker for `last_changed_at` |
+| ![Draft entry before save](project-1-rap-odata/docs/images/10-create-draft-entry.png) | Draft state — **Create** / **Discard Draft** actions |
+| ![Object created confirmation](project-1-rap-odata/docs/images/11-create-object-created.png) | Draft activated — **Object created** toast, Edit/Delete now available |
+| ![List refreshed after create](project-1-rap-odata/docs/images/12-list-after-create.png) | Products list showing the new row after activation |
+| ![Delete flow](project-1-rap-odata/docs/images/13-delete-flow.png) | Multi-select delete → **Objects deleted** toast |
 
 > Save your screenshots into `docs/images/` with these exact names (or update
 > the paths above) — see the "Presenting this on GitHub" notes below for why.
@@ -113,8 +137,4 @@ flowchart LR
   production.
 - Introduce numbering/ID generation via a proper number range object
   instead of relying solely on managed UUID keys, if this needs to
-<<<<<<< HEAD
   integrate with external systems that expect sequential IDs.
-=======
-  integrate with external systems that expect sequential IDs.
->>>>>>> 12554ad4c5397a0cf8d27752ef63619747c7dc61
